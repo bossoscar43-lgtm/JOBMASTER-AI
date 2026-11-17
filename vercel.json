@@ -1,0 +1,26 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "regions": ["cdg1"],
+  "functions": {
+    "src/app/api/jobs/search/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/cron/refresh-jobs/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/resumes/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/resumes/[id]/adapt/route.ts": {
+      "maxDuration": 60
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/refresh-jobs",
+      "schedule": "0 */6 * * *"
+    }
+  ]
+}

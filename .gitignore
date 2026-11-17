@@ -1,0 +1,17 @@
+node_modules
+.next
+out
+data
+.env
+.env.local
+.env*.local
+# Sécurité : empêcher tout commit accidentel de secrets, même renommés.
+.env.production
+.env.development
+**/*.pem
+**/*service-account*.json
+**/firebase-adminsdk*.json
+*.log
+.DS_Store
+*.tsbuildinfo
+next-env.d.ts

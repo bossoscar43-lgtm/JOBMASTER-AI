@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Le snapshot n'est accessible QU'au SDK Admin (serveur).
+    // Le client web n'a aucun accès direct : toutes les données passent par
+    // notre API, qui applique les contrôles d'accès et le chiffrement.
+    match /jobmaster/{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,17 @@
+Camille Dupont
+Paris
+camille.dupont@exemple.fr | 06 12 34 56 78
+
+Développeuse Full Stack Junior
+Développeuse web avec 2 ans d'expérience dans la conception d'applications React et Node.js.
+
+COMPÉTENCES
+JavaScript, React, TypeScript, Node.js, SQL, Git, HTML, CSS, Agile, Excel
+Anglais courant. Rigueur, Autonomie, Travail en équipe.
+
+EXPÉRIENCE
+2022-2024 Développeuse Front-End chez Malt — Développement d'interfaces React, tests, intégration API.
+
+FORMATIONS
+2022 Master Informatique, Université Paris Cité
+2020 Licence Informatique, Université Paris Cité
