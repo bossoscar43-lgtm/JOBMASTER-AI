@@ -65,7 +65,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const attachments = await buildApplicationAttachments(app, user as User);
     const profile = getProfile(user.id);
-    const body = buildBodyWithContact(job as never, app.email_body || app.cover_letter, {
+    // Privilégier la lettre de motivation personnalisée comme corps de l'email,
+    // puis l'email généré, avec un fallback professionnel.
+    const baseBody =
+      app.cover_letter && app.cover_letter.length > 80
+        ? app.cover_letter
+        : app.email_body && app.email_body.length > 80
+          ? app.email_body
+          : `Madame, Monsieur,\n\nVeuillez trouver ma candidature pour le poste de ${job.title} chez ${job.company} en pièce jointe. Je reste à votre disposition pour un entretien.\n\nCordialement.`;
+    const body = buildBodyWithContact(job as never, baseBody, {
       fullName: user.full_name, email: user.email, phone: profile.phone, city: profile.city, linkedin: profile.linkedin,
     });
 

@@ -71,19 +71,30 @@ export function buildSubject(job: Job, fullName: string): string {
   return `Candidature — ${job.title} — ${fullName}`;
 }
 
-/** Construit le corps de l'email avec les coordonnées complètes du candidat. */
+/** Construit le corps de l'email avec la lettre du candidat et une signature
+ *  claire contenant ses coordonnées (nom, email, téléphone, ville, LinkedIn). */
 export function buildBodyWithContact(
   job: Job,
   body: string,
   contact: { fullName: string; email: string; phone?: string; city?: string; linkedin?: string }
 ): string {
-  const coords = [
-    contact.fullName,
-    contact.email,
-    contact.phone || "",
-    contact.city || "",
-    contact.linkedin || "",
-  ].filter(Boolean).join(" | ");
+  let letter = body || `Madame, Monsieur,\n\nJe vous adresse ma candidature pour le poste de ${job.title} chez ${job.company}.\n\nVeuillez trouver mon CV et ma lettre de motivation en pièces jointes.\n\nJe reste à votre disposition pour un entretien.`;
+  // La lettre générée se termine souvent par le nom du candidat : on retire
+  // cette dernière ligne pour éviter un doublon avec la signature.
+  const letterLines = letter.split("\n").map((l) => l.trim()).filter(Boolean);
+  if (letterLines.length && letterLines[letterLines.length - 1] === contact.fullName) {
+    letterLines.pop();
+    letter = letterLines.join("\n");
+  }
 
-  return `${body || `Madame, Monsieur,\n\nJe vous adresse ma candidature pour le poste de ${job.title} chez ${job.company}.\n\nVeuillez trouver mon CV et ma lettre de motivation en pièces jointes.\n\nJe reste à votre disposition pour un entretien.\n`}\n\n---\n${coords}`;
+  const signature = [
+    `Cordialement,`,
+    contact.fullName,
+    contact.phone ? `Tél. : ${contact.phone}` : "",
+    contact.city ? `Ville : ${contact.city}` : "",
+    contact.linkedin ? `LinkedIn : ${contact.linkedin}` : "",
+    `Email : ${contact.email}`,
+  ].filter(Boolean).join("\n");
+
+  return `${letter}\n\n${signature}`;
 }
