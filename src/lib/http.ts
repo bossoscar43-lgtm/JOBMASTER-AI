@@ -37,6 +37,15 @@ export function validationError(error: z.ZodError) {
 /** Exécute un handler API avec gestion d'erreur uniforme. */
 export async function handle(fn: () => Promise<Response> | Response): Promise<Response> {
   try {
+    // Sur Vercel (serverless), chaque function démarre avec un cache vide :
+    // le recharger depuis Supabase AVANT toute requête, sinon les sessions
+    // et données ne sont pas trouvées (401/500 intermittents).
+    try {
+      const { waitForHydration } = await import("./db");
+      await waitForHydration();
+    } catch (e) {
+      console.error("[DB] hydration impossible:", e instanceof Error ? e.message : e);
+    }
     const response = await fn();
     // Sur Vercel (serverless), attendre la persistance cloud avant de répondre.
     // Tolérant aux erreurs : un échec de flush ne doit pas transformer une
