@@ -43,16 +43,6 @@ export async function DELETE(_req: Request, { params }: Ctx) {
     if (!resume) return notFound("CV introuvable.");
     run("DELETE FROM resumes WHERE id=?", id);
     audit(user.id, "resume.deleted", "resume", id, { name: resume.name });
-    // Vérifier la persistance effective dans Supabase après le flush.
-    const { flushPendingWrites } = await import("@/lib/db");
-    await flushPendingWrites();
-    const { getSupabase } = await import("@/lib/supabase");
-    const sb = getSupabase();
-    let persisted = "n/a";
-    if (sb) {
-      const { data } = await sb.from("jm_snapshot").select("rows").eq("table_name", "resumes").maybeSingle();
-      persisted = (data?.rows || []).some((r: Record<string, unknown>) => r.id === id) ? "STILL_PRESENT" : "DELETED";
-    }
-    return ok({ deleted: true, persisted });
+    return ok({ deleted: true });
   });
 }
