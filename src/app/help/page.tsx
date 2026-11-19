@@ -7,7 +7,7 @@ export const metadata = { title: "Centre d'aide" };
 const ITEMS = [
   { icon: FileText, title: "Importer mon CV", text: "PDF, DOCX ou TXT, 10 Mo maximum. Les PDF scannés (images) produisent peu de texte : privilégiez un PDF textuel. L'analyse extrait uniquement les informations réellement présentes." },
   { icon: Search, title: "Lancer une recherche", text: "Définissez vos préférences une fois dans « Recherche automatique », puis cliquez sur « LANCER MA RECHERCHE AUTOMATIQUE ». Les offres sont dédupliquées, filtrées et scorées." },
-  { icon: Send, title: "Envoyer une candidature", text: "Depuis une offre, générez le CV adapté et la lettre. Vérifiez les textes, indiquez l'email du recruteur et cochez l'autorisation explicite. En mode démo, l'email est journalisé sans être envoyé." },
+  { icon: Send, title: "Envoyer une candidature", text: "Depuis une offre, cliquez sur « Postuler » : le CV adapté, la lettre et vos coordonnées sont préparés. Si l'annonce publie un email, la candidature est envoyée après votre accord. Sinon, le vrai lien de l'annonce s'ouvre pour postuler officiellement." },
   { icon: Mic2, title: "Coach entretien", text: "Simulez un entretien écrit ou vocal. L'IA note chaque réponse sur 100 et génère un rapport avec points forts et axes d'amélioration." },
   { icon: Bot, title: "Assistant IA", text: "Disponible sur toutes les pages. Il utilise le contexte de votre compte (CV, offres, candidatures) avec votre accord." },
   { icon: ShieldCheck, title: "Sécurité & RGPD", text: "Sessions httpOnly, rôles attribués côté serveur, journalisation des actions sensibles. Depuis les paramètres, exportez ou supprimez vos données." },
@@ -27,7 +27,7 @@ export default function HelpPage() {
       </div>
       <Card className="mt-6">
         <h2 className="font-bold">Limites et transparence</h2>
-        <p className="mt-2 text-sm leading-relaxed jm-muted">JOBMASTER AI n'envoie aucune candidature sans votre autorisation explicite, ne contourne aucun CAPTCHA ou protection anti-robot, et n'invente jamais d'expérience, de diplôme ou de compétence. Sans clés API configurées, l'application fonctionne avec un moteur local déterministe et un jeu d'offres de démonstration clairement identifié.</p>
+        <p className="mt-2 text-sm leading-relaxed jm-muted">JOBMASTER AI n'envoie aucune candidature sans votre autorisation explicite, ne contourne aucun CAPTCHA ou protection anti-robot, et n'invente jamais d'expérience, de diplôme, de compétence ni d'adresse email de recruteur. Les offres proviennent de sources réelles (Screeningpass) et l'IA fonctionne en local si aucune clé OpenAI n'est configurée.</p>
         <Link href="/register" className="mt-5 inline-block"><Button>Commencer maintenant</Button></Link>
       </Card>
     </main>

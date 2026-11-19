@@ -56,7 +56,7 @@ export function hashOf(value: string): string {
 const demoConnector: Connector = {
   id: "demo",
   name: "Offres de démonstration",
-  homepage: "https://example.com",
+  homepage: "https://www.francetravail.fr",
   requiresKey: false,
   async search(q) {
     // Utilise le jeu figé de 24 offres FRANÇAISES, indépendamment de la table

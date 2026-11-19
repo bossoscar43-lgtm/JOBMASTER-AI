@@ -36,7 +36,7 @@ export default function AdminConfigPage() {
   return (
     <div className="space-y-5">
       <div className="rounded-xl border border-indigo-500/25 bg-indigo-500/5 p-4 text-xs">
-        <strong>Respect des conditions d'utilisation.</strong> JOBMASTER AI utilise exclusivement des API officielles et des sources accessibles. Aucun CAPTCHA, protection anti-robot ou restriction technique n'est contourné. Les connecteurs non configurés restent désactivés ; le jeu de données de démonstration prend le relais.
+        <strong>Respect des conditions d'utilisation.</strong> JOBMASTER AI utilise exclusivement des API officielles et des sources accessibles (Screeningpass pour les offres françaises). Aucun CAPTCHA, protection anti-robot ou restriction technique n'est contourné. Les connecteurs non configurés ou suspendus restent désactivés.
       </div>
 
       <Card className="space-y-4">
@@ -57,7 +57,7 @@ export default function AdminConfigPage() {
               )}
               {c.id === "francetravail" && (
                 <p className="mt-2 text-[11px] jm-muted">
-                  API gratuite (inscription requise) : <a href="https://francetravail.io" target="_blank" rel="noopener noreferrer" className="text-indigo-500 underline">francetravail.io</a> → Se connecter → Créer un compte → Mon espace → Mes applications → Créer une application → souscrire à « Offres d'emploi v2 » → récupérer client_id / client_secret. C'est la source de référence pour les offres en France.
+                  ⚠️ L'API Offres d'emploi de France Travail est suspendue depuis 2026 (data.gouv.fr). Ce connecteur est désactivé. Les offres françaises proviennent désormais de <strong>Screeningpass</strong> (API gratuite, sans clé, déjà active).
                 </p>
               )}
               {!CONNECTOR_FIELDS[c.id] && <p className="mt-2 text-[11px] jm-muted">{c.requiresKey ? "Clé à configurer via les variables d'environnement." : "API publique gratuite, active sans clé."}</p>}

@@ -77,9 +77,9 @@ export default function SearchPage() {
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs">
           <p className="font-semibold text-amber-600">Aucune offre en France trouvée avec les sources actuelles.</p>
           <p className="mt-2 jm-muted">
-            Pour obtenir de vraies offres françaises en temps réel, connectez <strong>France Travail</strong>
-            (API gratuite) : créez un compte sur <a href="https://francetravail.io" target="_blank" rel="noopener noreferrer" className="text-indigo-500 underline">francetravail.io</a>,
-            générez vos clés, puis ajoutez-les dans <strong>Administration → Intégrations</strong>. La recherche utilisera alors votre profil automatiquement.
+            Les offres proviennent de <strong>Screeningpass</strong> (API gratuite, sans clé). Essayez d'élargir vos filtres
+            (ville, rayon, type de contrat, ancienneté de l'offre) ou de lancer une recherche avec d'autres mots-clés.
+            La recherche utilise automatiquement votre profil (postes, compétences, domaines).
           </p>
         </div>
       )}
@@ -135,7 +135,7 @@ export default function SearchPage() {
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-xs">
           <CheckCircle2 className="h-4 w-4 text-emerald-500" />
           <span className="font-semibold">{result.jobs.length} offres trouvées</span>
-          <span className="jm-muted">· Sources : {result.sources.length ? result.sources.map((s) => SOURCE_LABELS[s] || s).join(", ") : "jeu de démonstration local"}</span>
+          <span className="jm-muted">· Sources : {result.sources.length ? result.sources.map((s) => SOURCE_LABELS[s] || s).join(", ") : "sources en direct"}</span>
           {(!result.sources.length || result.sources.every((s) => s === "demo")) && <Badge tone="amber"><AlertCircle className="h-3 w-3" /> Données de démonstration</Badge>}
         </div>
       )}

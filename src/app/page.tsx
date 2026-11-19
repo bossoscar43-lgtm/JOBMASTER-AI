@@ -64,7 +64,7 @@ export default function HomePage() {
           </div>
           <div className="mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs jm-muted">
             <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-emerald-500" /> Sans carte bancaire</span>
-            <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-emerald-500" /> Mode démonstration inclus</span>
+            <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-emerald-500" /> Offres réelles en France</span>
             <span className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> Données protégées</span>
           </div>
         </div>
