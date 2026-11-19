@@ -117,7 +117,7 @@ Les connecteurs utilisent **uniquement des API officielles**. Aucun CAPTCHA, ant
 5. Cliquer sur **LANCER MA RECHERCHE AUTOMATIQUE** : collecte, déduplication, filtrage des offres expirées et scoring.
 6. Ouvrir une offre → générer le CV adapté + lettre + email + message LinkedIn.
 7. Vérifier et modifier les textes, puis valider.
-8. Envoi **uniquement après autorisation explicite** ; en mode démo l'email est journalisé.
+8. **L'email du recruteur est retrouvé automatiquement** depuis l'annonce (regex dans la description, domaine de l'entreprise déduit de l'URL, ou adresse de démonstration), avec un niveau de confiance. Le bouton 🔍 permet de le pré-remplir. L'email envoyé contient **les coordonnées complètes du candidat** (nom, email, téléphone, ville, LinkedIn) + CV et lettre en pièces jointes. Envoi **uniquement après autorisation explicite**.
 9. Suivi des statuts, relances, notifications, et préparation d'entretien avec le Coach IA.
 
 ---

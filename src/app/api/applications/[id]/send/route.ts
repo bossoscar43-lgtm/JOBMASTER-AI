@@ -7,10 +7,12 @@ import { sendMail } from "@/lib/mailer";
 import { COST, consume, InsufficientCredits } from "@/lib/credits";
 import { buildApplicationAttachments } from "@/lib/cv/application-attachments";
 import { ensureApplicationDocuments } from "@/lib/applications/ensure-documents";
+import { findRecruiterEmail, buildBodyWithContact } from "@/lib/jobs/recruiter-email";
+import { getProfile } from "@/lib/repositories";
 
 const schema = z.object({
   authorized: z.literal(true),
-  to: z.string().trim().email(),
+  to: z.string().trim().email().optional(), // optionnel : trouvé automatiquement si absent
   mode: z.enum(["email", "assisted"]).default("email"),
 });
 
@@ -31,11 +33,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (!parsed.success) {
       return fail("Vous devez autoriser explicitement l'envoi et fournir une adresse email valide.", "AUTHORIZATION_REQUIRED", 403);
     }
-    const { to, mode } = parsed.data;
+    let to = parsed.data.to;
+    const mode = parsed.data.mode;
+
+    // Retrouve automatiquement l'email du recruteur depuis l'annonce.
+    const job = app.job ? { ...app.job, is_demo: 0 } : null;
+    const recruiter = job ? findRecruiterEmail(job as never) : null;
+    if (!to && recruiter) to = recruiter.email;
 
     if (mode === "assisted") {
       audit(user.id, "application.assisted_open", "application", id, { to, url: app.job?.url });
       return ok({ status: "assisted", url: app.job?.url, message: "Ouvrez l'annonce et remplissez le formulaire avec les documents générés. Votre validation reste nécessaire." });
+    }
+
+    if (!to) {
+      return fail("Impossible de trouver l'email du recruteur. Indiquez-le manuellement.", "NO_RECRUITER_EMAIL", 400);
     }
 
     if (user.credits_balance !== -1 && user.credits_balance < COST.emailSend) throw new InsufficientCredits();
@@ -45,11 +57,24 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // par l'étape « Générer les documents » au préalable.
     const complete = await ensureApplicationDocuments(app, user);
     const attachments = await buildApplicationAttachments(complete, user);
+    const profile = getProfile(user.id);
+    const baseBody = complete.email_body || complete.cover_letter ||
+      `Bonjour,\n\nVeuillez trouver ma candidature pour le poste de ${complete.job?.title} chez ${complete.job?.company} en pièce jointe.\n\nCordialement.`;
+    const bodyWithContact = buildBodyWithContact(
+      complete.job as never,
+      baseBody,
+      {
+        fullName: user.full_name,
+        email: user.email,
+        phone: profile.phone,
+        city: profile.city,
+        linkedin: profile.linkedin,
+      }
+    );
     const result = await sendMail({
       to,
-      subject: complete.email_subject || `Candidature — ${complete.job?.title}`,
-      body: complete.email_body || complete.cover_letter ||
-        `Bonjour,\n\nVeuillez trouver ma candidature pour le poste de ${complete.job?.title} chez ${complete.job?.company} en pièce jointe.\n\nCordialement.`,
+      subject: complete.email_subject || `Candidature — ${complete.job?.title} — ${user.full_name}`,
+      body: bodyWithContact,
       userId: user.id, applicationId: id,
       attachments,
     });
@@ -68,6 +93,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return ok({
       status: result.status,
       message: result.message,
+      to,
+      recruiterFound: recruiter?.source || "manual",
       followupScheduled: true,
       attachments: attachments.map((a) => a.filename),
     }, { creditsUsed: COST.emailSend });

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Send, Save, Download, CalendarClock, ExternalLink, ShieldCheck, FileText } from "lucide-react";
+import { ArrowLeft, Send, Save, Download, CalendarClock, ExternalLink, ShieldCheck, FileText, Search, CheckCircle2, AlertCircle } from "lucide-react";
 import { useApi, apiFetch, apiJson } from "@/components/hooks";
 import { Badge, Button, Card, EmptyState, Field, Input, Select, Spinner, Textarea } from "@/components/ui";
 import { useApp } from "@/components/providers";
@@ -17,8 +17,23 @@ export function ApplicationDetailView({ id }: { id: string }) {
   const [sending, setSending] = useState(false);
   const [recipient, setRecipient] = useState("");
   const [authorized, setAuthorized] = useState(false);
+  const [recruiter, setRecruiter] = useState<{ email: string; source: string; confidence: string; note: string } | null>(null);
+  const [finding, setFinding] = useState(false);
 
   useEffect(() => { if (app) setForm(app); }, [app]);
+
+  async function findRecruiter() {
+    setFinding(true);
+    try {
+      const r = await apiFetch<{ email: string; source: string; confidence: string; note: string } | null>(
+        `/api/applications/${id}/find-recruiter`
+      );
+      setRecruiter(r);
+      if (r?.email) setRecipient(r.email);
+      toast(r ? `Email trouvé : ${r.email}` : "Aucun email trouvé dans l'annonce.", r ? "success" : "info");
+    } catch (e) { toast(e instanceof Error ? e.message : "Erreur", "error"); }
+    finally { setFinding(false); }
+  }
 
   async function save() {
     if (!form) return;
@@ -41,10 +56,12 @@ export function ApplicationDetailView({ id }: { id: string }) {
     if (!authorized && mode === "email") { toast("Cochez l'autorisation explicite avant l'envoi.", "error"); return; }
     setSending(true);
     try {
-      const res = await apiJson<{ status: string; message: string; url?: string }>(`/api/applications/${id}/send`, "POST", {
-        authorized: mode === "assisted" ? true : true, to: recipient || "recrutement@entreprise.fr", mode,
+      const res = await apiJson<{ status: string; message: string; url?: string; to?: string }>(`/api/applications/${id}/send`, "POST", {
+        authorized: true,
+        ...(recipient ? { to: recipient } : {}),
+        mode,
       });
-      toast(res.data.message, "success");
+      toast(res.data.to ? `${res.data.message} Destinataire : ${res.data.to}` : res.data.message, "success");
       if (res.data.url) window.open(res.data.url, "_blank", "noopener,noreferrer");
       await reload();
     } catch (e) { toast(e instanceof Error ? e.message : "Erreur", "error"); }
@@ -116,7 +133,22 @@ export function ApplicationDetailView({ id }: { id: string }) {
 
           <Card className="border-indigo-500/25 space-y-4">
             <h2 className="flex items-center gap-2 font-bold"><Send className="h-4 w-4 text-indigo-500" /> Envoyer ma candidature</h2>
-            <Field label="Email du recruteur"><Input type="email" value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="recrutement@entreprise.fr" /></Field>
+            <Field label="Email du recruteur">
+              <div className="flex gap-2">
+                <Input type="email" value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="Trouvé automatiquement depuis l'annonce" />
+                <Button type="button" variant="outline" size="sm" onClick={findRecruiter} loading={finding} title="Trouver l'email du recruteur"><Search className="h-4 w-4" /></Button>
+              </div>
+            </Field>
+            {recruiter && (
+              <div className={`rounded-lg p-2.5 text-[11px] ${recruiter.confidence === "high" ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}`}>
+                <p className="flex items-center gap-1.5 font-semibold">
+                  {recruiter.confidence === "high" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
+                  {recruiter.source === "description" ? "Trouvé dans l'annonce" : "Adresse probable"}
+                </p>
+                <p className="mt-1">{recruiter.note}</p>
+              </div>
+            )}
+            <p className="text-[11px] jm-muted">Cliquez sur 🔍 pour retrouver automatiquement l'email du recruteur dans l'annonce. Les coordonnées du candidat sont ajoutées à l'email.</p>
             <label className="flex items-start gap-2.5 rounded-xl border p-3 text-xs">
               <input type="checkbox" checked={authorized} onChange={(e) => setAuthorized(e.target.checked)} className="mt-0.5 h-4 w-4 accent-indigo-600" />
               <span>J'autorise explicitement JOBMASTER AI à envoyer cette candidature par email à l'adresse indiquée. Je confirme avoir relu les documents.</span>
