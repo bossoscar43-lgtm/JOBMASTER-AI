@@ -1,5 +1,6 @@
 import { ok, handle } from "@/lib/http";
-import { all, run, uid, now, isSupabaseMode, getSupabase, flushPendingWrites } from "@/lib/db";
+import { all, run, uid, now, flushPendingWrites } from "@/lib/db";
+import { isSupabaseMode, getSupabase } from "@/lib/supabase";
 
 /** Diagnostic temporaire : teste chaque étape de la persistance. */
 export async function GET() {
