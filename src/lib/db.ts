@@ -343,14 +343,33 @@ function trackWrite(p: Promise<void>): void {
   pendingWrites.push(p);
 }
 
-/** Attend que toutes les écritures cloud soient persistées, puis vide la file.
- *  Les promesses restent dans la file jusqu'au flush : on est certain que
- *  chaque écriture (y compris les DELETE) est bien envoyée à Supabase. */
+/** Attend que toutes les écritures cloud soient persistées, puis envoie un
+ *  snapshot COMPLET de toutes les tables. Cela garantit un état cohérent,
+ *  même si plusieurs mutations (dont des DELETE) se sont succédé. */
 export async function flushPendingWrites(): Promise<void> {
   while (pendingWrites.length) {
     const batch = pendingWrites;
     pendingWrites = [];
     await Promise.all(batch);
+  }
+  await writeFullSnapshot();
+}
+
+/** Écrit l'état complet de toutes les tables dans Supabase (une seule fois). */
+async function writeFullSnapshot(): Promise<void> {
+  const sb = getSupabase();
+  if (!sb || !isSupabaseMode()) return;
+  try {
+    const db = getDb();
+    const snapshot = TABLES.map((table) => ({
+      table_name: table,
+      rows: db.prepare(`SELECT * FROM ${table}`).all() as Record<string, unknown>[],
+      updated_at: new Date().toISOString(),
+    }));
+    await sb.from("jm_snapshot").upsert(snapshot, { onConflict: "table_name" });
+    console.log(`[Supabase] snapshot complet écrit (${snapshot.reduce((s, x) => s + x.rows.length, 0)} lignes).`);
+  } catch (e) {
+    console.error("[Supabase] snapshot complet impossible:", e instanceof Error ? e.message : e);
   }
 }
 
@@ -360,7 +379,8 @@ export function run(sql: string, ...params: Param[]): { changes: number; lastIns
     lastInsertRowid: number | bigint;
   };
   if (isFirestoreMode()) trackWrite(syncMutation(sql, params));
-  if (isSupabaseMode()) trackWrite(syncSupabaseMutation(sql));
+  // Supabase : on n'écrit plus table par table. Le snapshot complet est
+  // envoyé une seule fois par flushPendingWrites() à la fin de la requête.
   return result;
 }
 
@@ -495,33 +515,6 @@ export async function hydrateFromSupabase(): Promise<number> {
     console.error("[Supabase] rehydration impossible :", e instanceof Error ? e.message : e);
     return 0;
   }
-}
-
-// Verrou séquentiel : les écritures Supabase doivent s'enchaîner pour que
-// l'ordre des mutations (特别是 les DELETE) soit respecté.
-let syncChain: Promise<void> = Promise.resolve();
-
-/** Écrit un snapshot complet de la table modifiée dans Supabase. */
-async function syncSupabaseMutation(sql: string): Promise<void> {
-  const match = sql.trim().match(/^(INSERT|UPDATE|DELETE|REPLACE)\s+(?:OR\s+\w+\s+)?(?:INTO\s+)?([a-z_]+)/i);
-  if (!match) return;
-  const table = match[2].toLowerCase();
-  if (!TABLES.includes(table)) return;
-  const sb = getSupabase();
-  if (!sb) return;
-  const task = syncChain.then(async () => {
-    try {
-      const rows = getDb().prepare(`SELECT * FROM ${table}`).all() as Record<string, unknown>[];
-      await sb.from("jm_snapshot").upsert(
-        { table_name: table, rows, updated_at: new Date().toISOString() },
-        { onConflict: "table_name" }
-      );
-    } catch (e) {
-      console.error(`[Supabase] sync ${table}:`, e instanceof Error ? e.message : e);
-    }
-  });
-  syncChain = task;
-  await task;
 }
 
 export function audit(
