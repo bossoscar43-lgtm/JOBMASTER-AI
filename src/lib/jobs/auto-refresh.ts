@@ -22,10 +22,18 @@ export function startAutoRefresh(): void {
     try {
       const { refreshAllJobs } = await import("./scheduler");
       const result = await refreshAllJobs();
+      // Relances automatiques des candidatures dues.
+      let followups = { sent: 0, skipped: 0, errors: 0 };
+      try {
+        const { processDueFollowups } = await import("./followup");
+        followups = await processDueFollowups();
+      } catch (e) {
+        console.error("[AutoRefresh] relances:", e instanceof Error ? e.message : e);
+      }
       nextRunAt = new Date(Date.now() + INTERVAL_MS).toISOString();
       console.log(
         `[AutoRefresh] Terminé : ${result.users} utilisateur(s), ${result.jobs} offres, ` +
-        `${result.errors} erreur(s). Prochain dans ${INTERVAL_HOURS} h.`
+        `${followups.sent} relance(s), ${result.errors + followups.errors} erreur(s). Prochain dans ${INTERVAL_HOURS} h.`
       );
     } catch (e) {
       console.error("[AutoRefresh] échec :", e instanceof Error ? e.message : e);

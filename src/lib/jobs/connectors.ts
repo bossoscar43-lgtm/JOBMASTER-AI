@@ -125,10 +125,10 @@ export function connectorsStatus() {
   return CONNECTORS.map((c) => {
     let configured = !c.requiresKey;
     if (FREE_CONNECTORS.some((f) => f.id === c.id)) configured = true;
-    if (c.id === "francetravail") {
-      const cfg = getConfig<{ clientId?: string }>("connector_francetravail", {});
-      configured = Boolean(cfg.clientId || process.env.FRANCE_TRAVAIL_CLIENT_ID);
-    }
+    // Offres démo désactivées : plus aucun jeu de démonstration.
+    if (c.id === "demo") configured = false;
+    // France Travail suspendu officiellement depuis 2026 (data.gouv.fr).
+    if (c.id === "francetravail") configured = false;
     if (c.id === "wttj") {
       const cfg = getConfig<{ apiKey?: string }>("connector_wttj", {});
       configured = Boolean(cfg.apiKey || process.env.WELCOME_TO_THE_JUNGLE_API_KEY);
