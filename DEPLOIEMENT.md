@@ -119,6 +119,8 @@ Le planificateur intégré au serveur et le Vercel Cron **coexistent sans doublo
 - [ ] **Un seul** email dans `ADMIN_EMAILS` (choisir 064 ou 104)
 - [ ] `CRON_SECRET` régénéré
 - [ ] Clé OpenAI révoquée (elle a été partagée dans la conversation) puis régénérée si vous voulez l'IA réelle
+- [ ] Clé Resend révoquée (elle a été partagée dans la conversation) puis régénérée sur resend.com
+- [ ] Domaine vérifié dans Resend pour envoyer à n'importe quel recruteur (sinon test limité à votre propre email)
 - [ ] Mentions légales complétées (`src/app/legal/page.tsx`)
 - [ ] HTTPS actif (automatique sur Vercel)
 - [ ] `COOKIE_INSECURE_LOCAL` absent

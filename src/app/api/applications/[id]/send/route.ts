@@ -5,6 +5,8 @@ import { run, now, audit, uid } from "@/lib/db";
 import { getApplication } from "@/lib/repositories";
 import { sendMail } from "@/lib/mailer";
 import { COST, consume, InsufficientCredits } from "@/lib/credits";
+import { buildApplicationAttachments } from "@/lib/cv/application-attachments";
+import { ensureApplicationDocuments } from "@/lib/applications/ensure-documents";
 
 const schema = z.object({
   authorized: z.literal(true),
@@ -39,9 +41,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (user.credits_balance !== -1 && user.credits_balance < COST.emailSend) throw new InsufficientCredits();
     consume(user, COST.emailSend, "Envoi de candidature", { applicationId: id });
 
+    // Génère automatiquement les documents si l'utilisateur n'est pas passé
+    // par l'étape « Générer les documents » au préalable.
+    const complete = await ensureApplicationDocuments(app, user);
+    const attachments = await buildApplicationAttachments(complete, user);
     const result = await sendMail({
-      to, subject: app.email_subject || `Candidature — ${app.job?.title}`,
-      body: app.email_body || app.cover_letter, userId: user.id, applicationId: id,
+      to,
+      subject: complete.email_subject || `Candidature — ${complete.job?.title}`,
+      body: complete.email_body || complete.cover_letter ||
+        `Bonjour,\n\nVeuillez trouver ma candidature pour le poste de ${complete.job?.title} chez ${complete.job?.company} en pièce jointe.\n\nCordialement.`,
+      userId: user.id, applicationId: id,
+      attachments,
     });
     if (result.status === "failed") return fail(result.message, "SEND_FAILED", 502);
 
@@ -55,6 +65,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       uid(), id, app.status, "sent", result.message, ts
     );
     audit(user.id, "application.sent", "application", id, { to, provider: result.status });
-    return ok({ status: result.status, message: result.message, followupScheduled: true }, { creditsUsed: COST.emailSend });
+    return ok({
+      status: result.status,
+      message: result.message,
+      followupScheduled: true,
+      attachments: attachments.map((a) => a.filename),
+    }, { creditsUsed: COST.emailSend });
   });
 }

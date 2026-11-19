@@ -16,6 +16,42 @@ export interface SendMailResult {
   message: string;
 }
 
+/** Envoi via Resend API (gratuit 100/jour). Utilise le domaine de test
+ *  onboarding@resend.dev si RESEND_FROM n'est pas défini. */
+async function sendViaResend(
+  input: SendMailInput,
+  apiKey: string,
+  from: string
+): Promise<SendMailResult> {
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to: [input.to],
+      subject: input.subject || "Candidature JOBMASTER AI",
+      text: input.body || "Veuillez trouver ma candidature en pièce jointe.",
+      html: `<p>${(input.body || "Veuillez trouver ma candidature en pièce jointe.").replace(/\n/g, "<br>")}</p>`,
+      ...(input.attachments?.length
+        ? {
+            attachments: input.attachments.map((a) => ({
+              filename: a.filename,
+              content: a.content.toString("base64"),
+            })),
+          }
+        : {}),
+    }),
+  });
+  const json = (await res.json()) as { id?: string; message?: string; error?: { message?: string } };
+  if (!res.ok || !json.id) {
+    throw new Error(json.error?.message || json.message || `Resend ${res.status}`);
+  }
+  return { status: "sent", message: `Email envoyé via Resend (id ${json.id}).` };
+}
+
 export async function sendMail(input: SendMailInput): Promise<SendMailResult> {
   const cfg = getConfig<{
     host?: string; port?: number; user?: string; pass?: string; from?: string;
@@ -32,6 +68,25 @@ export async function sendMail(input: SendMailInput): Promise<SendMailResult> {
       uid(), input.userId, input.applicationId || null, input.to, input.subject, input.body, status, provider, now()
     );
   };
+
+  // Resend en priorité si configuré (envoi réel sans SMTP).
+  const resendKey = process.env.RESEND_API_KEY;
+  if (resendKey) {
+    const resendFrom = process.env.RESEND_FROM || "JOBMASTER AI <onboarding@resend.dev>";
+    try {
+      const result = await sendViaResend(input, resendKey, resendFrom);
+      record("sent", "resend");
+      notify(input.userId, "success", "Candidature envoyée", `Votre email à ${input.to} a été envoyé via Resend.`);
+      return result;
+    } catch (e) {
+      record("failed", "resend");
+      console.error("[Resend]", e instanceof Error ? e.message : e);
+      return {
+        status: "failed",
+        message: `Échec Resend : ${e instanceof Error ? e.message : "erreur inconnue"}`,
+      };
+    }
+  }
 
   if (!host || !user || !pass) {
     record("demo", "internal-log");

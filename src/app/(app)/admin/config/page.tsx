@@ -68,14 +68,37 @@ export default function AdminConfigPage() {
       </Card>
 
       <Card className="space-y-4">
-        <h2 className="flex items-center gap-2 font-bold"><Mail className="h-4 w-4 text-indigo-500" /> Serveur SMTP (envoi d'emails)</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="flex items-center gap-2 font-bold"><Mail className="h-4 w-4 text-indigo-500" /> Serveur SMTP (envoi des candidatures)</h2>
+          <div className="flex flex-wrap gap-1.5">
+            <button type="button" onClick={() => setValues((p) => ({ ...p, smtp: { ...(p.smtp || {}), host: "smtp.gmail.com", port: "587" } }))} className="rounded-lg border px-2.5 py-1 text-[11px] font-semibold hover:bg-indigo-500/10">Gmail</button>
+            <button type="button" onClick={() => setValues((p) => ({ ...p, smtp: { ...(p.smtp || {}), host: "smtp-mail.outlook.com", port: "587" } }))} className="rounded-lg border px-2.5 py-1 text-[11px] font-semibold hover:bg-indigo-500/10">Outlook</button>
+            <button type="button" onClick={() => setValues((p) => ({ ...p, smtp: { ...(p.smtp || {}), host: "smtp.orange.fr", port: "587" } }))} className="rounded-lg border px-2.5 py-1 text-[11px] font-semibold hover:bg-indigo-500/10">Orange</button>
+          </div>
+        </div>
         <div className="grid gap-4 md:grid-cols-3">
-          {[{ k: "host", l: "Hôte" }, { k: "port", l: "Port" }, { k: "user", l: "Utilisateur" }, { k: "pass", l: "Mot de passe" }, { k: "from", l: "Expéditeur" }].map((f) => (
+          {[{ k: "host", l: "Hôte" }, { k: "port", l: "Port" }, { k: "user", l: "Utilisateur" }, { k: "pass", l: "Mot de passe / App password" }, { k: "from", l: "Expéditeur" }].map((f) => (
             <Field key={f.k} label={f.l}><Input type={f.k === "pass" ? "password" : "text"} value={values.smtp?.[f.k] ?? data.smtp?.[f.k] ?? ""} onChange={(e) => set("smtp", f.k, e.target.value)} placeholder={f.k === "port" ? "587" : ""} /></Field>
           ))}
         </div>
-        <Button onClick={() => save("smtp")} loading={busy === "smtp"}><Save className="h-4 w-4" /> Enregistrer SMTP</Button>
-        <p className="text-[11px] jm-muted">Sans configuration, les candidatures restent journalisées en mode démonstration et ne sont jamais envoyées.</p>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => save("smtp")} loading={busy === "smtp"}><Save className="h-4 w-4" /> Enregistrer SMTP</Button>
+          <Button variant="outline" loading={busy === "test"} onClick={async () => {
+            const to = prompt("Email de test (recevez un message pour valider la config) :", values.smtp?.user || data.smtp?.user || "");
+            if (!to) return;
+            setBusy("test");
+            try {
+              await save("smtp");
+              const r = await apiJson<{ status: string; message: string }>("/api/admin/test-email", "POST", { to });
+              toast(r.data.message + (r.data.status === "sent" ? " Vérifiez votre boîte mail." : ""), r.data.status === "sent" ? "success" : "info");
+            } catch (e) { toast(e instanceof Error ? e.message : "Erreur", "error"); }
+            finally { setBusy(""); }
+          }}><Mail className="h-4 w-4" /> Envoyer un email de test</Button>
+        </div>
+        <div className="rounded-xl bg-indigo-500/5 p-3 text-xs jm-muted">
+          <strong>Gmail</strong> : activez la validation en 2 étapes, puis créez un <em>Mot de passe d'application</em> dans myaccount.google.com/apppasswords (16 caractères) — utilisez-le comme mot de passe.
+          <br /><strong>Sans configuration</strong> : les candidatures restent journalisées en mode démonstration et ne sont jamais envoyées. Les CV et lettres générés sont joints à l'email dès qu'un SMTP est actif.
+        </div>
       </Card>
 
       <Card className="space-y-4">
