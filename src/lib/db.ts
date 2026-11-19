@@ -457,17 +457,18 @@ export { TABLES };
 let _hydrateResult = 0;
 
 /** Réhydrate SQLite en mémoire depuis Supabase (table `jm_snapshot`).
- *  Idempotent : les lignes déjà présentes ne sont pas réinsérées. */
+ *  Le cache est RÉTABLLI à chaque appel : sur Vercel, chaque function a son
+ *  propre cache et doit refléter l'état actuel de Supabase (ajouts comme
+ *  suppressions). On vide puis on recharge toutes les tables. */
 export async function hydrateFromSupabase(): Promise<number> {
   const sb = getSupabase();
   if (!isSupabaseMode() || !sb) return 0;
   const db = getDb();
-  if (_hydrateResult > 0) return _hydrateResult;
   let count = 0;
   try {
-    // Les tables sont chargées dans un ordre arbitraire : on désactive
-    // temporairement les FK pour éviter les erreurs de référence.
     db.exec("PRAGMA foreign_keys = OFF;");
+    // Vider le cache avant de le remplir : reflète exactement Supabase.
+    for (const table of TABLES) db.prepare(`DELETE FROM ${table}`).run();
     for (const table of TABLES) {
       const { data, error } = await sb.from("jm_snapshot").select("rows").eq("table_name", table).maybeSingle();
       if (error || !data?.rows) continue;
@@ -478,9 +479,8 @@ export async function hydrateFromSupabase(): Promise<number> {
         return info.some((i) => i.name === c);
       });
       if (!columns.length) continue;
-      // INSERT OR IGNORE : ne pas écraser les données créées entre-temps.
       const stmt = db.prepare(
-        `INSERT OR IGNORE INTO ${table} (${columns.join(",")}) VALUES (${columns.map(() => "?").join(",")})`
+        `INSERT OR REPLACE INTO ${table} (${columns.join(",")}) VALUES (${columns.map(() => "?").join(",")})`
       );
       for (const row of rows) {
         stmt.run(...columns.map((c) => row[c] as never));
@@ -489,7 +489,6 @@ export async function hydrateFromSupabase(): Promise<number> {
     }
     db.exec("PRAGMA foreign_keys = ON;");
     _hydrateResult = count;
-    console.log(`[Supabase] ${count} lignes rehydratees.`);
     return count;
   } catch (e) {
     db.exec("PRAGMA foreign_keys = ON;");
