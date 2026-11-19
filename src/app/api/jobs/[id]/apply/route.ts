@@ -61,7 +61,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     );
 
     const recruiter = findRecruiterEmail(job as never);
-    if (!recruiter) return fail("Impossible de trouver l'email du recruteur. Ouvrez la candidature pour le saisir.", "NO_EMAIL", 400);
+    // Aucun email réel publié → ne pas inventer d'adresse. On prépare les
+    // documents et on ouvre le vrai lien de l'annonce (candidature assistée).
+    if (!recruiter.email) {
+      const attachments = await buildApplicationAttachments(app, user as User);
+      audit(user.id, "application.assisted_open", "application", app.id, { url: recruiter.applyUrl });
+      return ok({
+        status: "assisted",
+        url: recruiter.applyUrl,
+        message: "Aucune adresse email publiée dans cette annonce. Les documents sont prêts : postulez via le lien officiel.",
+        attachments: attachments.map((a) => a.filename),
+      });
+    }
 
     const attachments = await buildApplicationAttachments(app, user as User);
     const profile = getProfile(user.id);

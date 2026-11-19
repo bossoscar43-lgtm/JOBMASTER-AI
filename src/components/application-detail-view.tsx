@@ -17,7 +17,7 @@ export function ApplicationDetailView({ id }: { id: string }) {
   const [sending, setSending] = useState(false);
   const [recipient, setRecipient] = useState("");
   const [authorized, setAuthorized] = useState(false);
-  const [recruiter, setRecruiter] = useState<{ email: string; source: string; confidence: string; note: string } | null>(null);
+  const [recruiter, setRecruiter] = useState<{ email: string | null; source: string; confidence: string; note: string; applyUrl?: string } | null>(null);
   const [finding, setFinding] = useState(false);
 
   useEffect(() => { if (app) setForm(app); }, [app]);
@@ -25,12 +25,15 @@ export function ApplicationDetailView({ id }: { id: string }) {
   async function findRecruiter() {
     setFinding(true);
     try {
-      const r = await apiFetch<{ email: string; source: string; confidence: string; note: string } | null>(
+      const r = await apiFetch<{ email: string | null; source: string; confidence: string; note: string; applyUrl: string } | null>(
         `/api/applications/${id}/find-recruiter`
       );
       setRecruiter(r);
       if (r?.email) setRecipient(r.email);
-      toast(r ? `Email trouvé : ${r.email}` : "Aucun email trouvé dans l'annonce.", r ? "success" : "info");
+      toast(
+        r?.email ? `Email trouvé : ${r.email}` : "Aucun email publié — postulez via le lien officiel de l'annonce.",
+        r?.email ? "success" : "info"
+      );
     } catch (e) { toast(e instanceof Error ? e.message : "Erreur", "error"); }
     finally { setFinding(false); }
   }
@@ -143,9 +146,14 @@ export function ApplicationDetailView({ id }: { id: string }) {
               <div className={`rounded-lg p-2.5 text-[11px] ${recruiter.confidence === "high" ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}`}>
                 <p className="flex items-center gap-1.5 font-semibold">
                   {recruiter.confidence === "high" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
-                  {recruiter.source === "description" ? "Trouvé dans l'annonce" : "Adresse probable"}
+                  {recruiter.source === "description" ? "Trouvé dans l'annonce" : "Aucun email publié"}
                 </p>
                 <p className="mt-1">{recruiter.note}</p>
+                {!recruiter.email && recruiter.applyUrl && (
+                  <a href={recruiter.applyUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 font-semibold text-indigo-500 underline">
+                    Ouvrir l'annonce officielle <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
               </div>
             )}
             <p className="text-[11px] jm-muted">Cliquez sur 🔍 pour retrouver automatiquement l'email du recruteur dans l'annonce. Les coordonnées du candidat sont ajoutées à l'email.</p>

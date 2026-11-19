@@ -29,8 +29,11 @@ export default function JobsPage() {
     if (!confirm(`Postuler automatiquement chez ${company} ?\n\nVotre CV adapté, votre lettre et vos coordonnées seront envoyés au recruteur trouvé dans l'annonce.`)) return;
     setApplying(jobId);
     try {
-      const res = await apiJson<{ status: string; to: string; attachments: string[] }>(`/api/jobs/${jobId}/apply`, "POST", {});
-      toast(`Candidature envoyée à ${res.data.to} (${res.data.attachments.length} pièces jointes).`, "success");
+      const res = await apiJson<{ status: string; to?: string; url?: string; message: string; attachments: string[] }>(`/api/jobs/${jobId}/apply`, "POST", {});
+      toast(res.data.message, "success");
+      if (res.data.status === "assisted" && res.data.url) {
+        window.open(res.data.url, "_blank", "noopener,noreferrer");
+      }
       await reload();
     } catch (e) { toast(e instanceof Error ? e.message : "Erreur", "error"); }
     finally { setApplying(null); }

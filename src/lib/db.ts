@@ -337,17 +337,21 @@ export function one<T = Record<string, unknown>>(sql: string, ...params: Param[]
 // Écritures cloud en attente. Sur Vercel (serverless), la function peut être
 // figée dès que la réponse est renvoyée : on DOIT attendre ces écritures
 // avant de répondre, sinon les inscriptions/connexions ne sont pas persistées.
-const pendingWrites = new Set<Promise<void>>();
+let pendingWrites: Promise<void>[] = [];
 
 function trackWrite(p: Promise<void>): void {
-  pendingWrites.add(p);
-  void p.finally(() => pendingWrites.delete(p));
+  pendingWrites.push(p);
 }
 
-/** Attend que toutes les écritures cloud soient persistées. */
+/** Attend que toutes les écritures cloud soient persistées, puis vide la file.
+ *  Les promesses restent dans la file jusqu'au flush : on est certain que
+ *  chaque écriture (y compris les DELETE) est bien envoyée à Supabase. */
 export async function flushPendingWrites(): Promise<void> {
-  if (!pendingWrites.size) return;
-  await Promise.all([...pendingWrites]);
+  while (pendingWrites.length) {
+    const batch = pendingWrites;
+    pendingWrites = [];
+    await Promise.all(batch);
+  }
 }
 
 export function run(sql: string, ...params: Param[]): { changes: number; lastInsertRowid: number | bigint } {
@@ -494,6 +498,10 @@ export async function hydrateFromSupabase(): Promise<number> {
   }
 }
 
+// Verrou séquentiel : les écritures Supabase doivent s'enchaîner pour que
+// l'ordre des mutations (特别是 les DELETE) soit respecté.
+let syncChain: Promise<void> = Promise.resolve();
+
 /** Écrit un snapshot complet de la table modifiée dans Supabase. */
 async function syncSupabaseMutation(sql: string): Promise<void> {
   const match = sql.trim().match(/^(INSERT|UPDATE|DELETE|REPLACE)\s+(?:OR\s+\w+\s+)?(?:INTO\s+)?([a-z_]+)/i);
@@ -502,15 +510,19 @@ async function syncSupabaseMutation(sql: string): Promise<void> {
   if (!TABLES.includes(table)) return;
   const sb = getSupabase();
   if (!sb) return;
-  try {
-    const rows = getDb().prepare(`SELECT * FROM ${table}`).all() as Record<string, unknown>[];
-    await sb.from("jm_snapshot").upsert(
-      { table_name: table, rows, updated_at: new Date().toISOString() },
-      { onConflict: "table_name" }
-    );
-  } catch (e) {
-    console.error(`[Supabase] sync ${table}:`, e instanceof Error ? e.message : e);
-  }
+  const task = syncChain.then(async () => {
+    try {
+      const rows = getDb().prepare(`SELECT * FROM ${table}`).all() as Record<string, unknown>[];
+      await sb.from("jm_snapshot").upsert(
+        { table_name: table, rows, updated_at: new Date().toISOString() },
+        { onConflict: "table_name" }
+      );
+    } catch (e) {
+      console.error(`[Supabase] sync ${table}:`, e instanceof Error ? e.message : e);
+    }
+  });
+  syncChain = task;
+  await task;
 }
 
 export function audit(

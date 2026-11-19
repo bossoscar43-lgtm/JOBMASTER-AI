@@ -43,7 +43,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // Retrouve automatiquement l'email du recruteur depuis l'annonce.
     const job = app.job ? { ...app.job, is_demo: 0 } : null;
     const recruiter = job ? findRecruiterEmail(job as never) : null;
-    if (!to && recruiter) to = recruiter.email;
+    if (!to && recruiter?.email) to = recruiter.email;
 
     if (mode === "assisted") {
       audit(user.id, "application.assisted_open", "application", id, { to, url: app.job?.url });
