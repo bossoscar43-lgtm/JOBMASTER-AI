@@ -38,9 +38,14 @@ export function validationError(error: z.ZodError) {
 export async function handle(fn: () => Promise<Response> | Response): Promise<Response> {
   try {
     const response = await fn();
-    // Sur Vercel (serverless), attendre la persistance cloud avant de répondre,
-    // sinon la function se fige et les écritures (inscription...) sont perdues.
-    await flushPendingWrites();
+    // Sur Vercel (serverless), attendre la persistance cloud avant de répondre.
+    // Tolérant aux erreurs : un échec de flush ne doit pas transformer une
+    // réponse valide en 500.
+    try {
+      await flushPendingWrites();
+    } catch (e) {
+      console.error("[DB] flush impossible:", e instanceof Error ? e.message : e);
+    }
     return response;
   } catch (e) {
     return serverError(e);
