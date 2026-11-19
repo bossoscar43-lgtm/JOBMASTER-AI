@@ -60,9 +60,10 @@ export function AuthForm({ mode, token }: { mode: Mode; token?: string }) {
       const json = await safeJson(res);
       if (!json.ok) throw new Error(json.error);
       toast(mode === "login" ? "Connexion réussie. Redirection…" : "Compte créé. Redirection…", "success");
-      // Navigation complète (pas router.push) : garantit que le cookie de
-      // session est envoyé au serveur lors du chargement du dashboard.
-      window.location.assign("/dashboard");
+      // Navigation complète : garantit que le cookie de session est envoyé au
+      // serveur. On remplace la location (pas d'historique) pour éviter tout
+      // retour arrière qui ramènerait au formulaire.
+      window.location.replace("/dashboard");
     } catch (e) {
       toast(e instanceof Error ? e.message : "Une erreur est survenue.", "error");
     } finally {
