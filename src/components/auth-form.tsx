@@ -19,8 +19,8 @@ export function AuthForm({ mode, token }: { mode: Mode; token?: string }) {
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, [k]: e.target.value }));
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  async function submit(e?: React.FormEvent) {
+    if (e) e.preventDefault();
     if (submitting.current) return;
     submitting.current = true;
     setBusy(true);
@@ -97,7 +97,7 @@ export function AuthForm({ mode, token }: { mode: Mode; token?: string }) {
               <Link href="/login" className="mt-3 block font-semibold text-indigo-500">Retour à la connexion →</Link>
             </div>
           ) : (
-            <form onSubmit={submit} className="mt-6 space-y-4">
+            <div className="mt-6 space-y-4" onKeyDown={(e) => { if (e.key === "Enter") void submit(); }}>
               {mode === "register" && <Field label="Nom complet"><Input required value={form.full_name} onChange={set("full_name")} placeholder="Camille Dupont" /></Field>}
               {mode !== "reset" && <Field label="Adresse email"><Input required type="email" value={form.email} onChange={set("email")} placeholder="vous@exemple.fr" autoComplete="email" /></Field>}
               {(mode === "login" || mode === "register" || mode === "reset") && (
@@ -120,10 +120,10 @@ export function AuthForm({ mode, token }: { mode: Mode; token?: string }) {
                 </div>
               )}
               {mode === "login" && <div className="text-right"><Link href="/forgot-password" className="text-xs font-semibold text-indigo-500 hover:underline">Mot de passe oublié ?</Link></div>}
-              <Button type="submit" className="w-full" loading={busy}>
+              <Button type="button" onClick={() => void submit()} className="w-full" loading={busy}>
                 {mode === "login" ? "Se connecter" : mode === "register" ? "Créer mon compte" : mode === "forgot" ? "Envoyer le lien" : "Enregistrer"} <ArrowRight className="h-4 w-4" />
               </Button>
-            </form>
+            </div>
           )}
 
           <div className="mt-5 text-center text-xs jm-muted">

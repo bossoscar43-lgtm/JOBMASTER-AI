@@ -52,6 +52,7 @@ export function AssistantWidget() {
   return (
     <>
       <button
+        type="button"
         onClick={() => setOpen((v) => !v)}
         className="fixed bottom-5 right-5 z-50 grid h-14 w-14 place-items-center rounded-2xl jm-gradient text-white shadow-glow transition hover:scale-105"
         aria-label="Ouvrir l'assistant IA">
