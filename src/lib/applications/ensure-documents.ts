@@ -12,11 +12,34 @@ export async function ensureApplicationDocuments(
 ): Promise<Application> {
   if (app.email_body && app.cover_letter && app.resume_version_id) return app;
 
-  const resume = one<{ id: string }>(
+  let resume = one<{ id: string }>(
     "SELECT id FROM resumes WHERE user_id=? ORDER BY is_primary DESC, created_at DESC LIMIT 1", user.id
   );
   const job = getJob(app.job_id);
-  if (!resume || !job) return app;
+  if (!job) return app;
+
+  // Si aucun CV n'a été importé, en créer un automatiquement depuis le profil
+  // pour que la candidature puisse partir sans friction.
+  if (!resume) {
+    const profile = getProfile(user.id);
+    const text = [
+      profile.headline || "Curriculum Vitae",
+      profile.summary || "",
+      "COMPÉTENCES",
+      (profile.skills || []).join(", "),
+      "EXPÉRIENCE",
+      ...(profile.experiences || []).map((e) => `${e.title} ${e.company || ""} ${e.description || ""}`),
+      "FORMATIONS",
+      ...(profile.education || []).map((e) => `${e.degree} ${e.school || ""}`),
+    ].join("\n");
+    const resumeId = uid();
+    run(
+      "INSERT INTO resumes (id,user_id,name,original_filename,mime,original_text,extracted_profile,is_primary,version,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+      resumeId, user.id, "CV auto", "profil.txt", "text/plain", text,
+      JSON.stringify(profile), 1, 1, now()
+    );
+    resume = { id: resumeId };
+  }
 
   const profile = getProfile(user.id);
   const prefs = getPreferences(user.id);

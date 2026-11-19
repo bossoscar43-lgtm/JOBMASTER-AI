@@ -23,11 +23,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const job = getJob(id);
     if (!job) return notFound("Offre introuvable.");
 
-    // Vérifie qu'un CV existe.
-    const resume = one<{ id: string }>(
-      "SELECT id FROM resumes WHERE user_id=? ORDER BY is_primary DESC, created_at DESC LIMIT 1", user.id
-    );
-    if (!resume) return fail("Importez d'abord votre CV pour postuler.", "NO_CV", 400);
+    // Le CV est créé automatiquement depuis le profil si absent
+    // (voir ensureApplicationDocuments).
 
     if (user.credits_balance !== -1 && user.credits_balance < COST.emailSend) {
       throw new InsufficientCredits();
