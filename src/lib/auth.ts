@@ -86,6 +86,10 @@ export async function getCurrentUser(): Promise<User | null> {
   const jar = await cookies();
   const token = jar.get(COOKIE)?.value;
   if (!token) return null;
+  // Sur Vercel (serverless), le cache SQLite est vide au démarrage de chaque
+  // function : le recharger depuis Supabase AVANT de chercher la session.
+  const { waitForHydration } = await import("./db");
+  await waitForHydration();
   const session = one<{ user_id: string; expires_at: string }>(
     "SELECT user_id,expires_at FROM sessions WHERE token_hash=?",
     hashToken(token)

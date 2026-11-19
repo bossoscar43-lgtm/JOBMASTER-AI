@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Eye, EyeOff, Layers3, ArrowRight, ShieldCheck } from "lucide-react";
 import { Button, Card, Field, Input } from "./ui";
@@ -13,22 +13,22 @@ export function AuthForm({ mode, token }: { mode: Mode; token?: string }) {
   const { toast } = useApp();
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [form, setForm] = useState({ full_name: "", email: "", password: "", confirm: "", adminSecret: "" });
   const [done, setDone] = useState(false);
-  const submitting = useRef(false);
 
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, [k]: e.target.value }));
-
-  async function submit(e?: React.FormEvent) {
-    if (e) e.preventDefault();
-    if (submitting.current) return;
-    submitting.current = true;
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (busy) return;
     setBusy(true);
+    const data = new FormData(e.currentTarget);
+    const email = String(data.get("email") || "").trim().toLowerCase();
+    const password = String(data.get("password") || "");
+    const full_name = String(data.get("full_name") || "").trim();
+    const adminSecret = String(data.get("adminSecret") || "").trim();
     try {
       if (mode === "forgot") {
         const res = await fetch("/api/auth/forgot-password", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: form.email }),
+          body: JSON.stringify({ email }),
         });
         const json = await safeJson(res);
         if (!json.ok) throw new Error(json.error);
@@ -39,36 +39,32 @@ export function AuthForm({ mode, token }: { mode: Mode; token?: string }) {
       if (mode === "reset") {
         const res = await fetch("/api/auth/reset-password", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token, password: form.password }),
+          body: JSON.stringify({ token, password }),
         });
         const json = await safeJson(res);
         if (!json.ok) throw new Error(json.error);
         toast("Mot de passe mis à jour.", "success");
-        window.location.assign("/login");
+        window.location.replace("/login");
         return;
       }
-      if (mode === "register" && form.password !== form.confirm) {
+      if (mode === "register" && password !== String(data.get("confirm") || "")) {
         throw new Error("Les mots de passe ne correspondent pas.");
       }
       const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/register";
       const payload = mode === "login"
-        ? { email: form.email, password: form.password }
-        : { full_name: form.full_name, email: form.email, password: form.password, adminSecret: form.adminSecret };
+        ? { email, password }
+        : { full_name, email, password, adminSecret };
       const res = await fetch(endpoint, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
-      }).catch(() => { throw new Error("Impossible de contacter le serveur. Vérifiez qu'il est démarré."); });
+      }).catch(() => { throw new Error("Impossible de contacter le serveur."); });
       const json = await safeJson(res);
       if (!json.ok) throw new Error(json.error);
       toast(mode === "login" ? "Connexion réussie. Redirection…" : "Compte créé. Redirection…", "success");
-      // Navigation complète : garantit que le cookie de session est envoyé au
-      // serveur. On remplace la location (pas d'historique) pour éviter tout
-      // retour arrière qui ramènerait au formulaire.
       window.location.replace("/dashboard");
     } catch (e) {
       toast(e instanceof Error ? e.message : "Une erreur est survenue.", "error");
     } finally {
       setBusy(false);
-      submitting.current = false;
     }
   }
 
@@ -98,33 +94,33 @@ export function AuthForm({ mode, token }: { mode: Mode; token?: string }) {
               <Link href="/login" className="mt-3 block font-semibold text-indigo-500">Retour à la connexion →</Link>
             </div>
           ) : (
-            <div className="mt-6 space-y-4" onKeyDown={(e) => { if (e.key === "Enter") void submit(); }}>
-              {mode === "register" && <Field label="Nom complet"><Input required value={form.full_name} onChange={set("full_name")} placeholder="Camille Dupont" /></Field>}
-              {mode !== "reset" && <Field label="Adresse email"><Input required type="email" value={form.email} onChange={set("email")} placeholder="vous@exemple.fr" autoComplete="email" /></Field>}
+            <form onSubmit={submit} className="mt-6 space-y-4">
+              {mode === "register" && <Field label="Nom complet"><Input required name="full_name" placeholder="Camille Dupont" /></Field>}
+              {mode !== "reset" && <Field label="Adresse email"><Input required name="email" type="email" placeholder="vous@exemple.fr" autoComplete="email" /></Field>}
               {(mode === "login" || mode === "register" || mode === "reset") && (
-                <Field label="Mot de passe" hint={mode === "register" ? "12 caractères minimum, avec majuscule, minuscule et chiffre." : undefined}>
+                <Field label="Mot de passe" hint={mode === "register" ? "12 caractères minimum." : undefined}>
                   <div className="relative">
-                    <Input required type={show ? "text" : "password"} minLength={mode === "register" || mode === "reset" ? 12 : 1}
-                      value={form.password} onChange={set("password")} placeholder="••••••••••••" autoComplete={mode === "login" ? "current-password" : "new-password"} />
+                    <Input required name="password" type={show ? "text" : "password"} minLength={mode === "register" || mode === "reset" ? 12 : 1}
+                      placeholder="••••••••••••" autoComplete={mode === "login" ? "current-password" : "new-password"} />
                     <button type="button" onClick={() => setShow((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100" aria-label="Afficher">
                       {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                 </Field>
               )}
-              {mode === "register" && <Field label="Confirmer le mot de passe"><Input required type="password" value={form.confirm} onChange={set("confirm")} placeholder="••••••••••••" /></Field>}
-              {mode === "register" && (
+              {mode === "register" && <>
+                <Field label="Confirmer le mot de passe"><Input required name="confirm" type="password" placeholder="••••••••••••" /></Field>
                 <div className="rounded-xl border border-dashed p-3">
                   <p className="flex items-center gap-1.5 text-xs font-semibold"><ShieldCheck className="h-3.5 w-3.5 text-indigo-500" /> Accès administrateur</p>
-                  <p className="mb-2 mt-1 text-[11px] jm-muted">Réservé : secret fourni hors-bande uniquement. L'email seul n'accorde jamais de droits.</p>
-                  <Input value={form.adminSecret} onChange={set("adminSecret")} placeholder="Secret d'activation admin (optionnel)" />
+                  <p className="mb-2 mt-1 text-[11px] jm-muted">Réservé : secret fourni hors-bande uniquement.</p>
+                  <Input name="adminSecret" placeholder="Secret d'activation admin (optionnel)" />
                 </div>
-              )}
+              </>}
               {mode === "login" && <div className="text-right"><Link href="/forgot-password" className="text-xs font-semibold text-indigo-500 hover:underline">Mot de passe oublié ?</Link></div>}
-              <Button type="button" onClick={() => void submit()} className="w-full" loading={busy}>
+              <Button type="submit" className="w-full" loading={busy}>
                 {mode === "login" ? "Se connecter" : mode === "register" ? "Créer mon compte" : mode === "forgot" ? "Envoyer le lien" : "Enregistrer"} <ArrowRight className="h-4 w-4" />
               </Button>
-            </div>
+            </form>
           )}
 
           <div className="mt-5 text-center text-xs jm-muted">
