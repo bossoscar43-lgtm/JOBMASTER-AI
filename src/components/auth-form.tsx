@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Layers3, ArrowRight, ShieldCheck } from "lucide-react";
 import { Button, Card, Field, Input } from "./ui";
 import { useApp } from "./providers";
@@ -11,7 +10,6 @@ import { safeJson } from "./hooks";
 type Mode = "login" | "register" | "forgot" | "reset";
 
 export function AuthForm({ mode, token }: { mode: Mode; token?: string }) {
-  const router = useRouter();
   const { toast } = useApp();
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -46,7 +44,7 @@ export function AuthForm({ mode, token }: { mode: Mode; token?: string }) {
         const json = await safeJson(res);
         if (!json.ok) throw new Error(json.error);
         toast("Mot de passe mis à jour.", "success");
-        router.push("/login");
+        window.location.assign("/login");
         return;
       }
       if (mode === "register" && form.password !== form.confirm) {
@@ -61,9 +59,10 @@ export function AuthForm({ mode, token }: { mode: Mode; token?: string }) {
       }).catch(() => { throw new Error("Impossible de contacter le serveur. Vérifiez qu'il est démarré."); });
       const json = await safeJson(res);
       if (!json.ok) throw new Error(json.error);
-      toast(mode === "login" ? "Connexion réussie." : "Compte créé. Bienvenue sur JOBMASTER AI !", "success");
-      router.push("/dashboard");
-      router.refresh();
+      toast(mode === "login" ? "Connexion réussie. Redirection…" : "Compte créé. Redirection…", "success");
+      // Navigation complète (pas router.push) : garantit que le cookie de
+      // session est envoyé au serveur lors du chargement du dashboard.
+      window.location.assign("/dashboard");
     } catch (e) {
       toast(e instanceof Error ? e.message : "Une erreur est survenue.", "error");
     } finally {
