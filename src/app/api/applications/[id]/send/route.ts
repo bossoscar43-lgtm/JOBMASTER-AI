@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { handle, ok, fail, notFound, unauthorized, validationError } from "@/lib/http";
+import { handle, ok, fail, notFound, unauthorized, validationError, rateLimit } from "@/lib/http";
 import { getCurrentUser } from "@/lib/auth";
 import { run, now, audit, uid } from "@/lib/db";
 import { getApplication } from "@/lib/repositories";
@@ -25,6 +25,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   return handle(async () => {
     const user = await getCurrentUser();
     if (!user) return unauthorized();
+    // Protection anti-abus : max 20 envois par heure et par utilisateur.
+    if (!rateLimit("send:" + user.id, 20, 3600000)) {
+      return fail("Trop de candidatures envoyées. Réessayez plus tard.", "RATE_LIMIT", 429);
+    }
     const { id } = await params;
     const app = getApplication(id, user.id);
     if (!app) return notFound("Candidature introuvable.");

@@ -1,4 +1,4 @@
-import { handle, ok, fail, notFound, unauthorized } from "@/lib/http";
+import { handle, ok, fail, notFound, unauthorized, rateLimit } from "@/lib/http";
 import { getCurrentUser } from "@/lib/auth";
 import { run, uid, now, audit, notify, one } from "@/lib/db";
 import { getJob, getProfile, getPreferences } from "@/lib/repositories";
@@ -16,6 +16,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   return handle(async () => {
     const user = await getCurrentUser();
     if (!user) return unauthorized();
+    if (!rateLimit("apply:" + user.id, 20, 3600000)) {
+      return fail("Trop de candidatures envoyées. Réessayez plus tard.", "RATE_LIMIT", 429);
+    }
     const { id } = await params;
     const job = getJob(id);
     if (!job) return notFound("Offre introuvable.");
