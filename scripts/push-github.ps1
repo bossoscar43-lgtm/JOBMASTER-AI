@@ -12,14 +12,18 @@ param(
 $ErrorActionPreference = "Stop"
 $env:Path = "$env:Path;C:\Program Files\Git\cmd"
 
+# Se placer automatiquement dans le dossier du projet (peu importe d'où on lance le script)
+$projectDir = Split-Path -Parent $PSScriptRoot
+Set-Location $projectDir
+Write-Output "Dossier de travail : $projectDir"
+
 Write-Output "=== PRÉPARATION DU PUSH GITHUB ==="
 Write-Output "Pseudo GitHub : $Username"
 Write-Output "Dépôt : https://github.com/$Username/jobmaster-ai.git"
 Write-Output ""
 
-# Vérifier qu'on est dans le bon dossier
 if (-not (Test-Path "package.json")) {
-  throw "Exécutez ce script depuis le dossier jobmaster-ai."
+  throw "package.json introuvable dans $projectDir"
 }
 
 # Ajouter ou remplacer le remote
