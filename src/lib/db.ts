@@ -10,7 +10,18 @@ const dbPath = path.resolve(
   process.cwd(),
   process.env.DATABASE_PATH || "./data/jobmaster.db"
 );
-fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+// Sur Vercel (serverless), le système de fichiers est en lecture seule :
+// ne pas tenter de créer ./data au chargement du module (cela ferait un 500
+// sur TOUTES les routes). En mode cloud, on utilise de toute façon :memory:.
+const isCloud =
+  process.env.DATA_BACKEND === "supabase" || process.env.DATA_BACKEND === "firestore";
+if (!isCloud) {
+  try {
+    fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+  } catch (e) {
+    console.warn("[DB] impossibilité de créer le dossier data:", e instanceof Error ? e.message : e);
+  }
+}
 
 let _db: DatabaseSync | null = null;
 let _autoRefreshStarted = false;
