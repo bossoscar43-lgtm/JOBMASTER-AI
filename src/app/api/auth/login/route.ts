@@ -10,8 +10,8 @@ const schema = z.object({ email: z.string().trim().toLowerCase().email(), passwo
 export async function POST(req: Request) {
   return handle(async () => {
     const ip = await clientIp();
-    if (!rateLimit("login:" + ip, 12, 900000)) {
-      return fail("Trop de tentatives de connexion. Réessayez dans 15 minutes.", "RATE_LIMIT", 429);
+    if (!rateLimit("login:" + ip, 30, 300000)) {
+      return fail("Trop de tentatives de connexion. Réessayez dans quelques minutes.", "RATE_LIMIT", 429);
     }
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) return validationError(parsed.error);
