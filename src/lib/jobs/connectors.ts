@@ -73,49 +73,10 @@ const franceTravail: Connector = {
   name: "France Travail",
   homepage: "https://www.francetravail.fr",
   requiresKey: true,
-  async search(q) {
-    const cfg = getConfig<{ clientId?: string; clientSecret?: string }>("connector_francetravail", {});
-    const id = cfg.clientId || process.env.FRANCE_TRAVAIL_CLIENT_ID;
-    const secret = cfg.clientSecret || process.env.FRANCE_TRAVAIL_CLIENT_SECRET;
-    if (!id || !secret) return [];
-    try {
-      const tokenRes = await fetch("https://api.francetravail.io/partenaire/cle", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: `grant_type=client_credentials&client_id=${encodeURIComponent(id)}&client_secret=${encodeURIComponent(secret)}&scope=api_offresdemploiv2 o2dsoffre`,
-        signal: AbortSignal.timeout(12000),
-      });
-      if (!tokenRes.ok) throw new Error(`OAuth ${tokenRes.status}`);
-      const token = (await tokenRes.json()) as { access_token: string };
-      const params = new URLSearchParams({ size: String(q.limit || 30) });
-      if (q.keywords) params.set("motsCles", q.keywords);
-      if (q.city) params.set("commune", q.city);
-      if (q.contract) params.set("typeContrat", q.contract.toUpperCase());
-      const res = await fetch(`https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search?${params}`, {
-        headers: { Authorization: `Bearer ${token.access_token}`, Accept: "application/json" },
-        signal: AbortSignal.timeout(15000),
-      });
-      if (!res.ok) throw new Error(`Recherche ${res.status}`);
-      const data = (await res.json()) as {
-        resultats?: Array<Record<string, any>>;
-      };
-      return (data.resultats || []).map((r) => baseJob({
-        source: "francetravail",
-        external_id: String(r.id),
-        title: String(r.intitule || "Offre"),
-        company: String(r.entreprise?.nom || "Entreprise non précisée"),
-        city: String(r.lieuTravail?.libelle || ""),
-        contract_type: String(r.typeContratLibelle || r.typeContrat || ""),
-        salary: String(r.salaire?.libelle || ""),
-        description: String(r.description || ""),
-        url: String(r.lienPoursuivreVoeu || r.origineOffre?.urlOrigine || ""),
-        posted_at: String(r.dateCreation || now()),
-        skills: Array.isArray(r.competences) ? r.competences.map((c: any) => String(c.libelle || c)) : [],
-      }));
-    } catch (e) {
-      console.error("[Connecteur France Travail]", e instanceof Error ? e.message : e);
-      return [];
-    }
+  // L'API Offres d'emploi France Travail est suspendue depuis 2026
+  // (data.gouv.fr). Screeningpass la remplace comme source France.
+  async search() {
+    return [];
   },
 };
 

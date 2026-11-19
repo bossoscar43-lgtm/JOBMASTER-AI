@@ -3,6 +3,7 @@ import { hashOf } from "./connectors";
 import type { Connector, SearchQuery } from "./connectors";
 import { COMPANY_CONNECTORS } from "./lever-connector";
 import { EXTRA_CONNECTORS } from "./extra-connectors";
+import { SCREENINGPASS_CONNECTOR } from "./screeningpass-connector";
 
 /** Evite d'importer baseJob (dépendance circulaire) : construction locale équivalente. */
 function baseJob(p: Partial<Job> & Pick<Job, "title" | "company" | "source" | "external_id">): Job {
@@ -145,13 +146,16 @@ function mapRemotiveContract(t: string): string {
 }
 
 /**
- * Sources actives par défaut. Les connecteurs internationaux sont désactivés
- * par défaut car le cahier des charges exige des offres en FRANCE.
- * Ils restent disponibles via INTERNATIONAL_SOURCES=true pour un usage élargi.
+ * Sources réelles actives par défaut (API publiques gratuites).
+ * Toutes sont interrogées en direct ; le filtre France (FRANCE_ONLY=true)
+ * ne conserve ensuite que les offres situées en France.
+ * Aucune offre de démonstration n'est utilisée.
  */
-const INTERNATIONAL: Connector[] = [remotive, jobicy, ...EXTRA_CONNECTORS];
-
-export const FREE_CONNECTORS: Connector[] =
-  process.env.INTERNATIONAL_SOURCES === "true"
-    ? [...INTERNATIONAL, arbeitnow, ...COMPANY_CONNECTORS]
-    : [arbeitnow, ...COMPANY_CONNECTORS];
+export const FREE_CONNECTORS: Connector[] = [
+  ...SCREENINGPASS_CONNECTOR, // source France principale (gratuite, sans clé)
+  arbeitnow,
+  remotive,
+  jobicy,
+  ...EXTRA_CONNECTORS,
+  ...COMPANY_CONNECTORS,
+];

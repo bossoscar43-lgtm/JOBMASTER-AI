@@ -73,6 +73,17 @@ export default function SearchPage() {
         <Button variant="outline" size="sm" onClick={() => setShowFilters((v) => !v)}><SlidersHorizontal className="h-4 w-4" /> {showFilters ? "Masquer" : "Afficher"} les filtres</Button>
       </div>
 
+      {result && result.jobs.length === 0 && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs">
+          <p className="font-semibold text-amber-600">Aucune offre en France trouvée avec les sources actuelles.</p>
+          <p className="mt-2 jm-muted">
+            Pour obtenir de vraies offres françaises en temps réel, connectez <strong>France Travail</strong>
+            (API gratuite) : créez un compte sur <a href="https://francetravail.io" target="_blank" rel="noopener noreferrer" className="text-indigo-500 underline">francetravail.io</a>,
+            générez vos clés, puis ajoutez-les dans <strong>Administration → Intégrations</strong>. La recherche utilisera alors votre profil automatiquement.
+          </p>
+        </div>
+      )}
+
       <Card className="relative overflow-hidden border-indigo-500/25 p-6">
         <div className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-violet-500/15 blur-3xl" />
         <div className="relative space-y-4">

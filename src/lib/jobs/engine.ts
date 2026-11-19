@@ -143,15 +143,46 @@ export function persistJobs(jobs: Job[]): void {
   }
 }
 
+/** Construit une requête de recherche à partir du profil du candidat :
+ *  postes souhaités + compétences clés + domaines. */
+export function buildProfileKeywords(
+  profile: CandidateProfile,
+  prefs?: Preferences
+): string {
+  const parts: string[] = [];
+  const roles = (profile.desired_roles || []).filter(Boolean);
+  const skills = (profile.skills || []).filter(Boolean).slice(0, 3);
+  const domains = (prefs?.domains?.length ? prefs.domains : profile.domains || []).filter(Boolean);
+
+  if (roles.length) parts.push(roles.slice(0, 2).join(" "));
+  else if (profile.headline) parts.push(profile.headline);
+
+  if (skills.length) parts.push(skills.join(" "));
+  if (domains.length) parts.push(domains[0]);
+
+  // Fallback : intitulé générique à partir de l'expérience.
+  if (!parts.length && profile.experiences?.length) {
+    parts.push(profile.experiences[0].title || "emploi");
+  }
+  return parts.join(" ").trim().slice(0, 120) || "emploi";
+}
+
 export async function runSearch(
   userId: string,
   filters: SearchFilters,
   profile: CandidateProfile,
   prefs?: Preferences
 ): Promise<{ jobs: ScoredJob[]; searchId: string; sources: string[] }> {
+  // Construit les mots-clés depuis le PROFIL si l'utilisateur n'a rien saisi :
+  // recherche réellement personnalisée, en temps réel, sur internet.
+  const profileKeywords = buildProfileKeywords(profile, prefs);
+  const effectiveKeywords = filters.keywords?.trim() || profileKeywords;
+  console.log(`[Search] Mots-clés profil : "${effectiveKeywords}"`);
+
+  const liveConnectors = CONNECTORS.filter((c) => c.id !== "demo");
   const results = await Promise.allSettled(
-    CONNECTORS.map((c) => c.search({
-      keywords: filters.keywords,
+    liveConnectors.map((c) => c.search({
+      keywords: effectiveKeywords,
       city: filters.city || prefs?.cities?.[0],
       contract: filters.contract_types?.[0],
       limit: Math.max(60, filters.limit || 40),
@@ -162,18 +193,14 @@ export async function runSearch(
   const sources: string[] = [];
   results.forEach((r, i) => {
     if (r.status === "fulfilled") {
-      if (r.value.length && CONNECTORS[i].id !== "demo") sources.push(CONNECTORS[i].id);
+      if (r.value.length) sources.push(liveConnectors[i].id);
       raw.push(...r.value);
     } else {
-      console.error("[Search] connecteur", CONNECTORS[i].id, r.reason);
+      console.error("[Search] connecteur", liveConnectors[i].id, r.reason);
     }
   });
 
-  // Le jeu de démonstration FRANÇAIS est toujours inclus : il garantit des
-  // offres en France avec de vraies dates même si les sources externes
-  // (souvent internationales) ne fournissent rien de pertinent.
-  const demoOffers = await CONNECTORS[0].search({ limit: 40 });
-  raw.push(...demoOffers);
+  // Aucune offre démo : uniquement des annonces réelles récupérées en direct.
   const unique = dedupe(raw);
   const filtered = filterJobs(unique, filters, prefs);
   persistJobs(filtered);

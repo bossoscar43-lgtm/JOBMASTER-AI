@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { BriefcaseBusiness, MapPin, ExternalLink, Filter, Sparkles } from "lucide-react";
+import { BriefcaseBusiness, MapPin, ExternalLink, Filter, Sparkles, Send, Loader2 } from "lucide-react";
 import { RefreshButton } from "@/components/refresh-button";
+import { apiJson } from "@/components/hooks";
+import { useApp } from "@/components/providers";
 import { useApi } from "@/components/hooks";
 import { Badge, Button, Card, EmptyState, Input, Select, Spinner } from "@/components/ui";
 import { ScoreRing } from "@/components/charts";
@@ -16,10 +18,23 @@ interface Job {
 }
 
 export default function JobsPage() {
-  const { data: jobs, loading } = useApi<Job[]>("/api/jobs");
+  const { data: jobs, loading, reload } = useApi<Job[]>("/api/jobs");
+  const { toast } = useApp();
+  const [applying, setApplying] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [contract, setContract] = useState("");
   const [minScore, setMinScore] = useState("0");
+
+  async function apply(jobId: string, company: string) {
+    if (!confirm(`Postuler automatiquement chez ${company} ?\n\nVotre CV adapté, votre lettre et vos coordonnées seront envoyés au recruteur trouvé dans l'annonce.`)) return;
+    setApplying(jobId);
+    try {
+      const res = await apiJson<{ status: string; to: string; attachments: string[] }>(`/api/jobs/${jobId}/apply`, "POST", {});
+      toast(`Candidature envoyée à ${res.data.to} (${res.data.attachments.length} pièces jointes).`, "success");
+      await reload();
+    } catch (e) { toast(e instanceof Error ? e.message : "Erreur", "error"); }
+    finally { setApplying(null); }
+  }
 
   const filtered = (jobs || []).filter((j) => {
     if (q && !`${j.title} ${j.company} ${j.skills.join(" ")}`.toLowerCase().includes(q.toLowerCase())) return false;
@@ -72,7 +87,10 @@ export default function JobsPage() {
               </div>
               <div className="flex flex-wrap gap-1.5">{j.skills.slice(0, 6).map((s) => <Badge key={s} tone={j.matched_skills.includes(s) ? "green" : "slate"} className="text-[10px]">{s}</Badge>)}</div>
               <div className="mt-auto flex gap-2 border-t pt-4">
-                <Link href={`/jobs/${j.id}`} className="flex-1"><Button size="sm" className="w-full">Voir & préparer</Button></Link>
+                <Button size="sm" className="flex-1" loading={applying === j.id} onClick={() => apply(j.id, j.company)}>
+                  <Send className="h-3.5 w-3.5" /> Postuler
+                </Button>
+                <Link href={`/jobs/${j.id}`}><Button size="sm" variant="outline">Détails</Button></Link>
                 <a href={j.url} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="outline"><ExternalLink className="h-4 w-4" /></Button></a>
               </div>
             </Card>

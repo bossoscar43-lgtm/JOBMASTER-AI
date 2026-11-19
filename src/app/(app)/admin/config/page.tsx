@@ -57,7 +57,7 @@ export default function AdminConfigPage() {
               )}
               {c.id === "francetravail" && (
                 <p className="mt-2 text-[11px] jm-muted">
-                  API gratuite (inscription requise) : <a href="https://api.francetravail.io/fr" target="_blank" rel="noopener noreferrer" className="text-indigo-500 underline">api.francetravail.io</a> → Créer un compte partenaire → générer client_id / client_secret. C'est la source de référence pour les offres en France.
+                  API gratuite (inscription requise) : <a href="https://francetravail.io" target="_blank" rel="noopener noreferrer" className="text-indigo-500 underline">francetravail.io</a> → Se connecter → Créer un compte → Mon espace → Mes applications → Créer une application → souscrire à « Offres d'emploi v2 » → récupérer client_id / client_secret. C'est la source de référence pour les offres en France.
                 </p>
               )}
               {!CONNECTOR_FIELDS[c.id] && <p className="mt-2 text-[11px] jm-muted">{c.requiresKey ? "Clé à configurer via les variables d'environnement." : "API publique gratuite, active sans clé."}</p>}
