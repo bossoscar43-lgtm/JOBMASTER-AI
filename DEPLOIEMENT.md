@@ -119,7 +119,8 @@ Le planificateur intégré au serveur et le Vercel Cron **coexistent sans doublo
 - [ ] **Un seul** email dans `ADMIN_EMAILS` (choisir 064 ou 104)
 - [ ] `CRON_SECRET` régénéré
 - [ ] Clé OpenAI révoquée (elle a été partagée dans la conversation) puis régénérée si vous voulez l'IA réelle
-- [ ] Clé Resend révoquée (elle a été partagée dans la conversation) puis régénérée sur resend.com
+- [ ] Mot de passe d'application Gmail révoqué (partagé dans la conversation) puis régénéré sur myaccount.google.com/apppasswords
+- [ ] Vérifier qu'aucune config SMTP corrompue n'est stockée dans Supabase (`api_config` → clé `smtp`) : elle écraserait `.env.local`. La suppression force l'usage des variables d'environnement.
 - [ ] Domaine vérifié dans Resend pour envoyer à n'importe quel recruteur (sinon test limité à votre propre email)
 - [ ] Mentions légales complétées (`src/app/legal/page.tsx`)
 - [ ] HTTPS actif (automatique sur Vercel)
