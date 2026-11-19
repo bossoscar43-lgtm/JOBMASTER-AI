@@ -152,3 +152,5 @@ Le script de smoke test couvre : inscription, session, import CV, recherche, dé
 - Brancher Stripe webhooks pour synchroniser les abonnements réels.
 - Brancher un fournisseur d'email SMTP transactionnel pour les envois réels.
 - Pour monter en charge : migrer `db.ts` vers PostgreSQL/Supabase en conservant les règles RLS et les gardes serveur.
+ 
+ 
