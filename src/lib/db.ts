@@ -323,13 +323,29 @@ export function one<T = Record<string, unknown>>(sql: string, ...params: Param[]
   return row ? ({ ...row } as T) : null;
 }
 
+// Écritures cloud en attente. Sur Vercel (serverless), la function peut être
+// figée dès que la réponse est renvoyée : on DOIT attendre ces écritures
+// avant de répondre, sinon les inscriptions/connexions ne sont pas persistées.
+const pendingWrites = new Set<Promise<void>>();
+
+function trackWrite(p: Promise<void>): void {
+  pendingWrites.add(p);
+  void p.finally(() => pendingWrites.delete(p));
+}
+
+/** Attend que toutes les écritures cloud soient persistées. */
+export async function flushPendingWrites(): Promise<void> {
+  if (!pendingWrites.size) return;
+  await Promise.all([...pendingWrites]);
+}
+
 export function run(sql: string, ...params: Param[]): { changes: number; lastInsertRowid: number | bigint } {
   const result = getDb().prepare(sql).run(...(params as never[])) as {
     changes: number;
     lastInsertRowid: number | bigint;
   };
-  if (isFirestoreMode()) void syncMutation(sql, params);
-  if (isSupabaseMode()) void syncSupabaseMutation(sql);
+  if (isFirestoreMode()) trackWrite(syncMutation(sql, params));
+  if (isSupabaseMode()) trackWrite(syncSupabaseMutation(sql));
   return result;
 }
 

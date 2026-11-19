@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { ApiError, ApiResult } from "./types";
+import { flushPendingWrites } from "./db";
 
 export function ok<T>(data: T, meta?: Record<string, unknown>) {
   return NextResponse.json<ApiResult<T>>({ ok: true, data, ...(meta ? { meta } : {}) });
@@ -36,7 +37,11 @@ export function validationError(error: z.ZodError) {
 /** Exécute un handler API avec gestion d'erreur uniforme. */
 export async function handle(fn: () => Promise<Response> | Response): Promise<Response> {
   try {
-    return await fn();
+    const response = await fn();
+    // Sur Vercel (serverless), attendre la persistance cloud avant de répondre,
+    // sinon la function se fige et les écritures (inscription...) sont perdues.
+    await flushPendingWrites();
+    return response;
   } catch (e) {
     return serverError(e);
   }
